@@ -9,6 +9,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
 			domain='dev-lf7jyqpt7yg0qfln.us.auth0.com'
 			clientId='eqP9zYxnvifEfgXoHUqsc64yYjgB2bWm'
 			redirectUri={window.location.origin}
+			cacheLocation='localstorage'
 		>
 			<App />
 		</Auth0Provider>
