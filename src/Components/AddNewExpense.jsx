@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
 import {
 	Box,
 	TextField,
@@ -7,57 +8,61 @@ import {
 	MenuItem,
 	FormControl,
 } from '@mui/material';
-const expenseGroup = {
-	id: 1,
-	name: 'Trip to the Beach',
-	participants: [
-		{ id: 1, name: 'Alice' },
-		{ id: 2, name: 'Bob' },
-		{ id: 3, name: 'Charlie' },
-	],
-	expenses: [
-		{
-			id: 1,
-			name: 'Gas',
-			amount: 50,
-			payer: 1,
-			date: '2021-10-01',
-		},
-		{
-			id: 2,
-			name: 'Lunch',
-			amount: 30,
-			payer: 2,
-			date: '2021-10-02',
-		},
-	],
-};
+
+const EXPENSE_MANAGEMENT_SERVICE_URL = import.meta.env
+	.VITE_EXPENSE_MANAGEMENT_SERVICE_URL;
+
+const EXPENSE_GROUP_SERVICE_URL = import.meta.env
+	.VITE_EXPENSE_GROUP_SERVICE_URL;
 
 const AddNewExpense = () => {
+	const { expenseGroupName } = useParams();
+	const [expenseGroupDetails, setExpenseGroupDetails] = useState(null);
 	const [expenseName, setExpenseName] = useState('');
 	const [amount, setAmount] = useState('');
 	const [payer, setPayer] = useState('');
 	const [date, setDate] = useState('');
 
-	const handleAddExpense = (event) => {
+	useEffect(() => {
+		const fetchExpenseGroupDetails = async () => {
+			const response = await fetch(
+				`${EXPENSE_GROUP_SERVICE_URL}/expense_group/${expenseGroupName}`
+			);
+			const data = await response.json();
+			setExpenseGroupDetails(data[0]);
+		};
+		fetchExpenseGroupDetails();
+	}, [expenseGroupName]);
+
+	const handleAddExpense = async (event) => {
 		event.preventDefault();
 		const newExpense = {
-			name: expenseName,
-			amount,
-			payer,
+			expense_group: expenseGroupName,
+			expense: expenseName,
+			price: amount,
+			group_owner: expenseGroupDetails.creator,
+			paid_by: payer,
 			date,
 		};
-		console.log('Adding New Expense:', newExpense);
-		// Here you would typically send this to your backend or state management
+
+		await fetch(`${EXPENSE_MANAGEMENT_SERVICE_URL}/expense`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify(newExpense),
+		});
+
 		setExpenseName('');
 		setAmount('');
 		setPayer('');
 		setDate('');
+		window.location.href = '/';
 	};
 
 	return (
 		<>
-			{expenseGroup ? (
+			{expenseGroupDetails ? (
 				<Box
 					sx={{
 						marginTop: '10vh',
@@ -108,14 +113,16 @@ const AddNewExpense = () => {
 							fullWidth
 							sx={{ mb: 2 }}
 						>
-							{expenseGroup.participants.map((participant) => (
-								<MenuItem
-									key={participant.id}
-									value={participant.id}
-								>
-									{participant.name}
-								</MenuItem>
-							))}
+							{expenseGroupDetails.participants.map(
+								(participant) => (
+									<MenuItem
+										key={participant.name}
+										value={participant.name}
+									>
+										{participant.name}
+									</MenuItem>
+								)
+							)}
 						</TextField>
 						<TextField
 							label='Date'

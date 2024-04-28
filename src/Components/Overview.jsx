@@ -1,3 +1,5 @@
+/* eslint-disable no-mixed-spaces-and-tabs */
+/* eslint-disable react/prop-types */
 import {
 	Box,
 	Typography,
@@ -5,69 +7,78 @@ import {
 	ListItem,
 	ListItemText,
 	Divider,
+	Button,
 } from '@mui/material';
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 
-const expenseGroup = {
-	name: 'Trip to Paris',
-	participants: [
-		{ name: 'Alice' },
-		{ name: 'Bob' },
-		{ name: 'Charlie' },
-		{ name: 'David' },
-	],
-	expenses: [
-		{ payer: 'Alice', amount: 100 },
-		{ payer: 'Bob', amount: 150 },
-		{ payer: 'Charlie', amount: 200 },
-		{ payer: 'David', amount: 250 },
-	],
-};
+const EXPENSE_GROUP_SERVICE_URL = import.meta.env
+	.VITE_EXPENSE_GROUP_SERVICE_URL;
 
-const Overview = () => {
-	if (!expenseGroup) {
+const EXPENSE_MANAGEMENT_SERVICE_URL = import.meta.env
+	.VITE_EXPENSE_MANAGEMENT_SERVICE_URL;
+
+const Overview = ({ currentExpenseGroup }) => {
+	const [expenseGroupDetails, setExpenseGroupDetails] = useState([]);
+	const [expensesForGroup, setExpensesForGroup] = useState([]);
+	const [balances, setBalances] = useState({});
+
+	useEffect(() => {
+		if (!currentExpenseGroup) {
+			return;
+		}
+		const fetchExpenseGroupDetails = async () => {
+			const participants = await fetch(
+				`${EXPENSE_GROUP_SERVICE_URL}/expense_group/${currentExpenseGroup}`
+			);
+			const data = await participants.json();
+			setExpenseGroupDetails(data[0]);
+		};
+
+		const fetchExpensesForGroup = async () => {
+			const expenses = await fetch(
+				`${EXPENSE_MANAGEMENT_SERVICE_URL}/expenses/expense_group/${currentExpenseGroup}`
+			);
+			const data = await expenses.json();
+			setExpensesForGroup(data);
+		};
+
+		fetchExpenseGroupDetails();
+		fetchExpensesForGroup();
+	}, [currentExpenseGroup]);
+
+	useEffect(() => {
+		if (!expenseGroupDetails.participants) {
+			return;
+		}
+		const balances = {};
+		const totalExpenses = expensesForGroup.reduce(
+			(total, expense) => total + expense.price,
+			0
+		);
+
+		const paymentPerParticipant =
+			totalExpenses / expenseGroupDetails.participants.length;
+
+		expenseGroupDetails.participants.forEach((participant) => {
+			// calculate how much the participant paid and how much they should have paid
+			const paid = expensesForGroup
+				.filter((expense) => expense.paid_by === participant.name)
+				.reduce((total, expense) => total + expense.price, 0);
+			const shouldHavePaid = paymentPerParticipant;
+			balances[participant.name] = paid - shouldHavePaid;
+		});
+
+		setBalances(balances);
+	}, [expensesForGroup, expenseGroupDetails]);
+
+	if (!currentExpenseGroup) {
 		return (
-			<Typography sx={{ mt: 5 }}>No Expense Group Selected</Typography>
+			<Typography sx={{ mt: '10vh' }}>
+				No Expense Group Selected
+			</Typography>
 		);
 	}
-
-	// Calculate the total expenses
-	const totalExpenses = expenseGroup.expenses.reduce(
-		(total, expense) => total + expense.amount,
-		0
-	);
-
-	// Function to calculate balances
-	const calculateBalances = () => {
-		let balances = expenseGroup.participants.map((participant) => ({
-			name: participant.name,
-			paid: 0,
-			owes: 0,
-		}));
-
-		expenseGroup.expenses.forEach((expense) => {
-			const payer = balances.find((b) => b.name === expense.payer);
-			payer.paid += expense.amount;
-
-			const splitAmount =
-				expense.amount / expenseGroup.participants.length;
-			expenseGroup.participants.forEach((participant) => {
-				if (participant.name !== expense.payer) {
-					const participantBalance = balances.find(
-						(b) => b.name === participant.name
-					);
-					participantBalance.owes += splitAmount;
-				}
-			});
-		});
-
-		balances.forEach((b) => {
-			b.net = b.paid - b.owes;
-		});
-
-		return balances;
-	};
-
-	const balances = calculateBalances();
 
 	return (
 		<Box
@@ -85,29 +96,74 @@ const Overview = () => {
 			}}
 		>
 			<Typography variant='h5' sx={{ mb: 2 }}>
-				Expense Group Overview: {expenseGroup.name}
+				Expense Group Overview: {expenseGroupDetails.name}
 			</Typography>
 			<Typography sx={{ mb: 2 }}>
-				Total Expenses: {totalExpenses.toFixed(2)}
+				Total Expenses:{' '}
+				{expensesForGroup.reduce(
+					(total, expense) => total + expense.price,
+					0
+				)}
+				₺
 			</Typography>
 
 			<Divider sx={{ width: '100%', my: 2 }} />
-
-			<Typography variant='h6'>Balances:</Typography>
-			<List>
-				{balances.map((balance, index) => (
-					<ListItem key={index}>
-						<ListItemText
-							primary={`${balance.name}`}
-							secondary={`Paid: ${balance.paid.toFixed(
-								2
-							)}, Owes: ${balance.owes.toFixed(
-								2
-							)}, Net: ${balance.net.toFixed(2)}`}
-						/>
-					</ListItem>
-				))}
-			</List>
+			<Box
+				sx={{
+					display: 'flex',
+					flexDirection: 'row',
+					justifyContent: 'space-between',
+					width: '60%',
+				}}
+			>
+				<Box>
+					<Typography variant='h6'>Expenses:</Typography>
+					<List>
+						{expensesForGroup.map((expense, index) => (
+							<ListItem key={index}>
+								<ListItemText
+									primary={`${expense.expense}`}
+									secondary={`${
+										expense.paid_by
+									} Paid: ${expense.price.toFixed(2)} ₺`}
+								/>
+							</ListItem>
+						))}
+					</List>
+				</Box>
+				<Box>
+					<Typography variant='h6'>Debt status:</Typography>
+					<List>
+						{Object.entries(balances).map(
+							([participant, balance]) => (
+								<ListItem key={participant}>
+									<ListItemText
+										primary={
+											participant +
+											': ' +
+											expenseGroupDetails.participants.find(
+												(p) => p.name === participant
+											)?.email
+										}
+										secondary={
+											balance.toFixed(2) < 0
+												? `Owes: ${-balance.toFixed(
+														2
+												  )} ₺`
+												: `Is Owed: ${balance.toFixed(
+														2
+												  )} ₺`
+										}
+									/>
+								</ListItem>
+							)
+						)}
+					</List>
+				</Box>
+			</Box>
+			<Link to={`/create/expense/${currentExpenseGroup}`}>
+				<Button>Add New Expense</Button>
+			</Link>
 		</Box>
 	);
 };

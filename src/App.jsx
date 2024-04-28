@@ -5,6 +5,10 @@ import { useEffect, useState } from 'react';
 import CreateExpenseGroup from './Components/CreateExpenseGroup';
 import Overview from './Components/Overview';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import AddNewExpense from './Components/AddNewExpense';
+
+const EXPENSE_GROUP_SERVICE_URL = import.meta.env
+	.VITE_EXPENSE_GROUP_SERVICE_URL;
 
 function App() {
 	const { user, loginWithRedirect, isLoading, isAuthenticated, logout } =
@@ -17,7 +21,7 @@ function App() {
 		const userEmail = user?.email;
 		const fetchExpenseGroups = async () => {
 			const response = await fetch(
-				`http://localhost:3000/api/expense_groups/${userEmail}`
+				`${EXPENSE_GROUP_SERVICE_URL}/expense_groups/${userEmail}`
 			);
 			const data = await response.json();
 			setExpenseGroups(data);
@@ -52,14 +56,26 @@ function App() {
 				/>
 
 				<Routes>
-					<Route path='/' element={<Overview />}></Route>
+					<Route
+						path='/'
+						element={
+							<Overview
+								currentExpenseGroup={currentExpenseGroup}
+							/>
+						}
+					></Route>
 					<Route
 						path='/create/expensegroup'
 						element={
 							<CreateExpenseGroup
+								user={user}
 								isAuthenticated={isAuthenticated}
 							/>
 						}
+					></Route>
+					<Route
+						path='/create/expense/:expenseGroupName'
+						element={<AddNewExpense />}
 					></Route>
 				</Routes>
 			</Box>

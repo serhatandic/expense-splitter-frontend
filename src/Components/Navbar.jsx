@@ -74,7 +74,7 @@ export default function Navbar({
 												label='Expense Group'
 												onChange={handleChange}
 											>
-												{expenseGroups.map((group) => (
+												{expenseGroups?.map((group) => (
 													<MenuItem
 														key={group.name}
 														value={group.name}

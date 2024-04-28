@@ -1,5 +1,5 @@
 /* eslint-disable react/prop-types */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
 	Box,
 	Typography,
@@ -11,32 +11,45 @@ import {
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
 
-const CreateExpenseGroup = ({ isAuthenticated }) => {
+const EXPENSE_GROUP_SERVICE_URL = import.meta.env
+	.VITE_EXPENSE_GROUP_SERVICE_URL;
+
+const CreateExpenseGroup = ({ isAuthenticated, user }) => {
 	const [groupName, setGroupName] = useState('');
 	const [creationDate, setCreationDate] = useState('');
-	const [participants, setParticipants] = useState([{ name: '' }]);
+	const [participants, setParticipants] = useState([
+		{ name: user?.nickname, email: user?.email },
+	]);
+	useEffect(() => {
+		if (!user) {
+			return;
+		}
+		setParticipants([{ name: user.nickname, email: user.email }]);
+	}, [user]);
 
-	const handleCreateGroup = (event) => {
+	const handleCreateGroup = async (event) => {
 		event.preventDefault();
-		console.log(
-			JSON.stringify({
-				group_name: groupName,
+
+		await fetch(`${EXPENSE_GROUP_SERVICE_URL}/expense_group`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify({
+				owner_mail: user.email,
+				name: groupName,
 				creation_date: creationDate,
-				participants: participants.map(
-					(participant) => participant.name
-				),
-			})
-		);
-		setGroupName('');
-		setCreationDate('');
-		setParticipants([{ name: '' }]);
+				participants,
+			}),
+		});
+
 		window.location.href = '/';
 	};
 
-	const handleParticipantChange = (index, event) => {
+	const handleParticipantChange = (index, event, type) => {
 		const newParticipants = participants.map((participant, idx) => {
 			if (idx === index) {
-				return { ...participant, name: event.target.value };
+				return { ...participant, [type]: event.target.value };
 			}
 			return participant;
 		});
@@ -50,7 +63,9 @@ const CreateExpenseGroup = ({ isAuthenticated }) => {
 	const handleRemoveParticipant = (index) => {
 		setParticipants(participants.filter((_, idx) => idx !== index));
 	};
-
+	if (!user) {
+		return null;
+	}
 	return (
 		<Box
 			sx={{
@@ -110,7 +125,18 @@ const CreateExpenseGroup = ({ isAuthenticated }) => {
 								variant='outlined'
 								value={participant.name}
 								onChange={(e) =>
-									handleParticipantChange(index, e)
+									handleParticipantChange(index, e, 'name')
+								}
+								required
+								fullWidth
+								sx={{ mr: 1 }}
+							/>
+							<TextField
+								label='Email'
+								variant='outlined'
+								value={participant.email}
+								onChange={(e) =>
+									handleParticipantChange(index, e, 'email')
 								}
 								required
 								fullWidth
@@ -118,6 +144,7 @@ const CreateExpenseGroup = ({ isAuthenticated }) => {
 							/>
 							<IconButton
 								onClick={() => handleRemoveParticipant(index)}
+								disabled={participant.email === user.email}
 							>
 								<RemoveCircleOutlineIcon />
 							</IconButton>
