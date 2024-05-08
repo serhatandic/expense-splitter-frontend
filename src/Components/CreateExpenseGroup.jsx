@@ -30,6 +30,11 @@ const CreateExpenseGroup = ({ isAuthenticated, user }) => {
 	const handleCreateGroup = async (event) => {
 		event.preventDefault();
 
+		// make sure at least one participant is added
+		if (participants.length < 2) {
+			alert('At least 2 participant required');
+			return;
+		}
 		await fetch(`${EXPENSE_GROUP_SERVICE_URL}/expense_group`, {
 			method: 'POST',
 			headers: {
