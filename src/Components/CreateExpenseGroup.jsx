@@ -124,6 +124,7 @@ const CreateExpenseGroup = ({ isAuthenticated, user }) => {
 								label='Participant Name'
 								variant='outlined'
 								value={participant.name}
+								disabled={participant.email === user.email}
 								onChange={(e) =>
 									handleParticipantChange(index, e, 'name')
 								}
@@ -135,6 +136,7 @@ const CreateExpenseGroup = ({ isAuthenticated, user }) => {
 								label='Email'
 								variant='outlined'
 								value={participant.email}
+								disabled={participant.email === user.email}
 								onChange={(e) =>
 									handleParticipantChange(index, e, 'email')
 								}

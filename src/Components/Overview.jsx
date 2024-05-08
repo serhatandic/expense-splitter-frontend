@@ -18,10 +18,14 @@ const EXPENSE_GROUP_SERVICE_URL = import.meta.env
 const EXPENSE_MANAGEMENT_SERVICE_URL = import.meta.env
 	.VITE_EXPENSE_MANAGEMENT_SERVICE_URL;
 
+const BALANCE_CALCULATION_SERVICE_URL = import.meta.env
+	.VITE_BALANCE_CALCULATION_SERVICE_URL;
+
 const Overview = ({ currentExpenseGroup }) => {
 	const [expenseGroupDetails, setExpenseGroupDetails] = useState([]);
 	const [expensesForGroup, setExpensesForGroup] = useState([]);
 	const [balances, setBalances] = useState({});
+	const [transactions, setTransactions] = useState([]);
 
 	useEffect(() => {
 		if (!currentExpenseGroup) {
@@ -51,26 +55,28 @@ const Overview = ({ currentExpenseGroup }) => {
 		if (!expenseGroupDetails.participants) {
 			return;
 		}
-		const balances = {};
-		const totalExpenses = expensesForGroup.reduce(
-			(total, expense) => total + expense.price,
-			0
-		);
+		const fetchBalances = async () => {
+			const response = await fetch(
+				`${BALANCE_CALCULATION_SERVICE_URL}/calculate_balances`,
+				{
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+					},
+					body: JSON.stringify({
+						expenseGroupDetails,
+						expensesForGroup,
+					}),
+				}
+			);
+			const data = await response.json();
+			setBalances(data.balances);
+			setTransactions(JSON.parse(data.transactions));
+		};
 
-		const paymentPerParticipant =
-			totalExpenses / expenseGroupDetails.participants.length;
-
-		expenseGroupDetails.participants.forEach((participant) => {
-			// calculate how much the participant paid and how much they should have paid
-			const paid = expensesForGroup
-				.filter((expense) => expense.paid_by === participant.name)
-				.reduce((total, expense) => total + expense.price, 0);
-			const shouldHavePaid = paymentPerParticipant;
-			balances[participant.name] = paid - shouldHavePaid;
-		});
-
-		setBalances(balances);
-	}, [expensesForGroup, expenseGroupDetails]);
+		fetchBalances();
+		// eslint-disable-next-line
+	}, [expenseGroupDetails, expensesForGroup]);
 
 	if (!currentExpenseGroup) {
 		return (
@@ -79,7 +85,6 @@ const Overview = ({ currentExpenseGroup }) => {
 			</Typography>
 		);
 	}
-
 	return (
 		<Box
 			sx={{
@@ -118,9 +123,18 @@ const Overview = ({ currentExpenseGroup }) => {
 			>
 				<Box>
 					<Typography variant='h6'>Expenses:</Typography>
-					<List>
+					<List
+						sx={{
+							padding: 0,
+						}}
+					>
 						{expensesForGroup.map((expense, index) => (
-							<ListItem key={index}>
+							<ListItem
+								sx={{
+									padding: 0,
+								}}
+								key={index}
+							>
 								<ListItemText
 									primary={`${expense.expense}`}
 									secondary={`${
@@ -133,10 +147,19 @@ const Overview = ({ currentExpenseGroup }) => {
 				</Box>
 				<Box>
 					<Typography variant='h6'>Debt status:</Typography>
-					<List>
+					<List
+						sx={{
+							padding: 0,
+						}}
+					>
 						{Object.entries(balances).map(
 							([participant, balance]) => (
-								<ListItem key={participant}>
+								<ListItem
+									sx={{
+										padding: 0,
+									}}
+									key={participant}
+								>
 									<ListItemText
 										primary={
 											participant +
@@ -160,6 +183,40 @@ const Overview = ({ currentExpenseGroup }) => {
 						)}
 					</List>
 				</Box>
+			</Box>
+			<Divider sx={{ width: '100%', my: 2 }} />
+			<Box
+				sx={{
+					display: 'flex',
+					flexDirection: 'column',
+					justifyContent: 'space-between',
+					width: '60%',
+				}}
+			>
+				{/*
+					transaction format is "[{"from":"a","to":"bcdg","amount":500}]"
+				*/}
+				<Typography variant='h6'>How to settle all debts:</Typography>
+				<List
+					sx={{
+						padding: 0,
+					}}
+				>
+					{transactions.map((transaction, index) => (
+						<ListItem
+							sx={{
+								padding: 0,
+							}}
+							key={index}
+						>
+							<ListItemText
+								secondary={`${transaction.from} gives ${
+									transaction.to
+								} ${transaction.amount.toFixed(2)} ₺`}
+							/>
+						</ListItem>
+					))}
+				</List>
 			</Box>
 			<Link to={`/create/expense/${currentExpenseGroup}`}>
 				<Button>Add New Expense</Button>

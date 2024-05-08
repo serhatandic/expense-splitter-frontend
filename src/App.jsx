@@ -25,6 +25,7 @@ function App() {
 			);
 			const data = await response.json();
 			setExpenseGroups(data);
+			setCurrentExpenseGroup(data[data.length - 1].name);
 		};
 		if (isAuthenticated) {
 			fetchExpenseGroups();
