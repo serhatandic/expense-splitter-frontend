@@ -139,7 +139,9 @@ const Overview = ({ currentExpenseGroup }) => {
 									primary={`${expense.expense}`}
 									secondary={`${
 										expense.paid_by
-									} Paid: ${expense.price.toFixed(2)} ₺`}
+									} Paid: ${expense.price.toFixed(2)} ₺ at ${
+										expense.date
+									}`}
 								/>
 							</ListItem>
 						))}
